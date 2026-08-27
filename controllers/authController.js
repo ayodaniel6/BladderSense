@@ -95,7 +95,7 @@ const register = async (req, res) => {
             INSERT INTO auth_tokens (
                 id,
                 user_id,
-                token,
+                token_hash,
                 purpose,
                 expires_at
             )
@@ -131,8 +131,6 @@ const register = async (req, res) => {
                 emailVerified: false
             },
 
-            // Development only.
-            // Remove this when real email delivery is enabled.
             verificationToken: token
         });
 
@@ -228,7 +226,7 @@ const verifyEmail = async (req, res) => {
             SELECT id
             FROM auth_tokens
             WHERE user_id = $1
-              AND token = $2
+              AND token_hash = $2
               AND purpose = 'verification'
               AND used = FALSE
               AND expires_at > NOW()
@@ -361,7 +359,7 @@ const requestLogin = async (req, res) => {
             INSERT INTO auth_tokens (
                 id,
                 user_id,
-                token,
+                token_hash,
                 purpose,
                 expires_at
             )
@@ -385,8 +383,6 @@ const requestLogin = async (req, res) => {
         res.json({
             message: "Login token generated",
 
-            // Development only.
-            // Remove when email delivery is enabled.
             loginToken: token
         });
 
@@ -468,7 +464,7 @@ const verifyLogin = async (req, res) => {
             SELECT id
             FROM auth_tokens
             WHERE user_id = $1
-              AND token = $2
+              AND token_hash = $2
               AND purpose = 'login'
               AND used = FALSE
               AND expires_at > NOW()
@@ -543,9 +539,10 @@ const verifyLogin = async (req, res) => {
             sessionId,
             {
                 httpOnly: true,
-                secure: false,
+                secure: process.env.NODE_ENV === "production",
                 sameSite: "lax",
-                expires: sessionExpiresAt
+                expires: sessionExpiresAt,
+                maxAge: 7 * 24 * 60 * 60 * 1000
             }
         );
 
@@ -627,6 +624,143 @@ const logout = async (req, res) => {
     }
 };
 
+// ============================================================
+// RESEND VERIFICATION TOKEN
+// ============================================================
+
+const resendVerification = async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                error: "Email is required"
+            });
+        }
+
+        const normalizedEmail = email
+            .trim()
+            .toLowerCase();
+
+        await client.query("BEGIN");
+
+        // Find user
+        const userResult = await client.query(
+            `
+            SELECT id, email_verified
+            FROM users
+            WHERE email = $1
+            `,
+            [normalizedEmail]
+        );
+
+        if (userResult.rows.length === 0) {
+            await client.query("ROLLBACK");
+
+            return res.status(404).json({
+                error: "User not found"
+            });
+        }
+
+        const user = userResult.rows[0];
+
+        // Don't issue verification tokens to already verified users
+        if (user.email_verified) {
+            await client.query("ROLLBACK");
+
+            return res.status(400).json({
+                error: "Email address is already verified"
+            });
+        }
+
+        // Invalidate previous verification tokens
+        await client.query(
+            `
+            UPDATE auth_tokens
+            SET used = TRUE
+            WHERE user_id = $1
+              AND purpose = 'verification'
+              AND used = FALSE
+            `,
+            [user.id]
+        );
+
+        // Generate new token
+        const tokenId = crypto.randomUUID();
+        const token = generateToken();
+        const tokenHash = hashToken(token);
+
+        const expiresAt = new Date(
+            Date.now() + 15 * 60 * 1000
+        );
+
+        // Store hashed token
+        await client.query(
+            `
+            INSERT INTO auth_tokens (
+                id,
+                user_id,
+                token_hash,
+                purpose,
+                expires_at
+            )
+            VALUES ($1, $2, $3, $4, $5)
+            `,
+            [
+                tokenId,
+                user.id,
+                tokenHash,
+                "verification",
+                expiresAt
+            ]
+        );
+
+        await client.query("COMMIT");
+
+        // Send the actual token by email
+        await sendVerificationEmail(
+            normalizedEmail,
+            token
+        );
+
+        const response = {
+            message: "Verification token sent"
+        };
+
+        // Development only
+        if (process.env.NODE_ENV !== "production") {
+            response.verificationToken = token;
+        }
+
+        res.json(response);
+
+    } catch (error) {
+
+        try {
+            await client.query("ROLLBACK");
+        } catch (rollbackError) {
+            console.error(
+                "Resend verification rollback error:",
+                rollbackError
+            );
+        }
+
+        console.error(
+            "Resend verification error:",
+            error
+        );
+
+        res.status(500).json({
+            error: "Failed to resend verification token"
+        });
+
+    } finally {
+        client.release();
+    }
+};
+
 
 // ============================================================
 // EXPORTS
@@ -635,6 +769,7 @@ const logout = async (req, res) => {
 module.exports = {
     register,
     verifyEmail,
+    resendVerification,
     requestLogin,
     verifyLogin,
     logout

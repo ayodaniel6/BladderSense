@@ -1,26 +1,63 @@
 const express = require("express");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+
 const healthRoutes = require("./routes/healthRoutes");
 const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
-const cookieParser = require("cookie-parser");
-const testRoutes = require("./routes/testRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
-// const pool = require("./database/db");
 
 const app = express();
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
+
+
+// ============================================================
+// SECURITY
+// ============================================================
+
+app.use(helmet());
+
+
+// ============================================================
+// CORS
+// ============================================================
+
+app.use(
+    cors({
+        origin: process.env.FRONTEND_URL,
+        credentials: true
+    })
+);
+
+
+// ============================================================
+// BODY / COOKIE PARSING
+// ============================================================
 
 app.use(express.json());
 app.use(cookieParser());
 
+
+// ============================================================
+// ROUTES
+// ============================================================
+
 app.use("/api", healthRoutes);
 app.use("/api", userRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api", testRoutes);
 app.use("/api", profileRoutes);
 app.use("/api", trackingRoutes);
+
+
+// ============================================================
+// START SERVER
+// ============================================================
+
 app.listen(PORT, () => {
-    console.log(`BladderSense server running on port ${PORT}`);
+    console.log(
+        `BladderSense server running on port ${PORT}`
+    );
 });
