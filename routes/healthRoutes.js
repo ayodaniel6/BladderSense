@@ -5,7 +5,7 @@ const router = express.Router();
 router.get("/health", (req, res) => {
     res.json({
         status: "ok",
-        message: "BladderSense API is running"
+        message: "Hello, This is Daniel Ayodeji."
     });
 });
 
