@@ -1,5 +1,16 @@
 const pool = require("../database/db");
 
+const formatUser = (user) => ({
+    id: user.id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    preferredName: user.preferred_name,
+    email: user.email,
+    emailVerified: user.email_verified,
+    createdAt: user.created_at,
+    lastLoginAt: user.last_login_at
+});
+
 const getProfile = async (req, res) => {
     try {
         const result = await pool.query(
@@ -25,26 +36,13 @@ const getProfile = async (req, res) => {
             });
         }
 
-        const user = result.rows[0];
-
-        res.json({
-            user: {
-                id: user.id,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                preferredName: user.preferred_name,
-                email: user.email,
-                emailVerified: user.email_verified,
-                createdAt: user.created_at,
-                lastLoginAt: user.last_login_at
-            }
+        return res.json({
+            user: formatUser(result.rows[0])
         });
-
     } catch (error) {
-
         console.error("Get profile error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             error: "Failed to retrieve profile"
         });
     }
@@ -52,38 +50,31 @@ const getProfile = async (req, res) => {
 
 const updateProfile = async (req, res) => {
     try {
-        const {
-            firstName,
-            lastName,
-            preferredName
-        } = req.body;
+        const { preferredName } = req.body || {};
 
-        if (!firstName || !lastName) {
+        // Preferred name is currently the only editable profile field.
+        if (
+            preferredName !== undefined &&
+            typeof preferredName !== "string"
+        ) {
             return res.status(400).json({
-                error: "First name and last name are required"
+                error: "Preferred name must be text"
             });
         }
 
-        const cleanFirstName = firstName.trim();
-        const cleanLastName = lastName.trim();
-        const cleanPreferredName = preferredName
-            ? preferredName.trim()
-            : null;
-
-        if (!cleanFirstName || !cleanLastName) {
+        if (preferredName === undefined) {
             return res.status(400).json({
-                error: "First name and last name cannot be empty"
+                error: "No profile changes were provided"
             });
         }
+
+        const cleanPreferredName = preferredName.trim();
 
         const result = await pool.query(
             `
             UPDATE users
-            SET
-                first_name = $1,
-                last_name = $2,
-                preferred_name = $3
-            WHERE id = $4
+            SET preferred_name = $1
+            WHERE id = $2
             RETURNING
                 id,
                 first_name,
@@ -95,9 +86,7 @@ const updateProfile = async (req, res) => {
                 last_login_at
             `,
             [
-                cleanFirstName,
-                cleanLastName,
-                cleanPreferredName,
+                cleanPreferredName || null,
                 req.user.id
             ]
         );
@@ -108,27 +97,14 @@ const updateProfile = async (req, res) => {
             });
         }
 
-        const user = result.rows[0];
-
-        res.json({
+        return res.json({
             message: "Profile updated successfully",
-            user: {
-                id: user.id,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                preferredName: user.preferred_name,
-                email: user.email,
-                emailVerified: user.email_verified,
-                createdAt: user.created_at,
-                lastLoginAt: user.last_login_at
-            }
+            user: formatUser(result.rows[0])
         });
-
     } catch (error) {
-
         console.error("Update profile error:", error);
 
-        res.status(500).json({
+        return res.status(500).json({
             error: "Failed to update profile"
         });
     }
