@@ -26,7 +26,7 @@ const sendVerificationEmail = async (email, token) => {
     }
 
     const verificationUrl =
-        `${process.env.FRONTEND_URL}/verify-email?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+    `${process.env.FRONTEND_URL}/verify-registration?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
 
 
     await transporter.sendMail({
