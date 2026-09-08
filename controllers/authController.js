@@ -61,7 +61,7 @@ const register = async (req, res) => {
         const tokenHash = hashToken(token);
 
         const expiresAt = new Date(
-            Date.now() + 15 * 60 * 1000
+            Date.now() + 5 * 60 * 1000
         );
 
         await client.query("BEGIN");
@@ -115,7 +115,10 @@ const register = async (req, res) => {
         // Send the actual token, not the hash
         await sendVerificationEmail(
             normalizedEmail,
-            token
+            token,
+            preferredName
+                ? preferredName.trim()
+                : firstName.trim()
         );
 
         res.status(201).json({
@@ -183,9 +186,7 @@ const verifyEmail = async (req, res) => {
             .trim()
             .toLowerCase();
 
-        const normalizedToken = token
-            .trim()
-            .toUpperCase();
+        const normalizedToken = token.trim();
 
         // Hash the token supplied by the user
         const tokenHash = hashToken(
@@ -321,7 +322,11 @@ const requestLogin = async (req, res) => {
 
         const userResult = await pool.query(
             `
-            SELECT id, email_verified
+            SELECT
+                id,
+                email_verified,
+                first_name,
+                preferred_name
             FROM users
             WHERE email = $1
             `,
@@ -351,7 +356,7 @@ const requestLogin = async (req, res) => {
         const tokenHash = hashToken(token);
 
         const expiresAt = new Date(
-            Date.now() + 15 * 60 * 1000
+            Date.now() + 5 * 60 * 1000
         );
 
         await pool.query(
@@ -377,7 +382,8 @@ const requestLogin = async (req, res) => {
         // Send plaintext token to the user
         await sendLoginEmail(
             normalizedEmail,
-            token
+            token,
+            user.preferred_name || user.first_name
         );
 
         res.json({
@@ -423,9 +429,7 @@ const verifyLogin = async (req, res) => {
             .trim()
             .toLowerCase();
 
-        const normalizedToken = token
-            .trim()
-            .toUpperCase();
+        const normalizedToken = token.trim();
 
         // Hash submitted token before comparing
         const tokenHash = hashToken(
@@ -651,7 +655,11 @@ const resendVerification = async (req, res) => {
         // Find user
         const userResult = await client.query(
             `
-            SELECT id, email_verified
+            SELECT
+                id,
+                email_verified,
+                first_name,
+                preferred_name
             FROM users
             WHERE email = $1
             `,
@@ -695,7 +703,7 @@ const resendVerification = async (req, res) => {
         const tokenHash = hashToken(token);
 
         const expiresAt = new Date(
-            Date.now() + 15 * 60 * 1000
+            Date.now() + 5 * 60 * 1000
         );
 
         // Store hashed token
@@ -724,7 +732,8 @@ const resendVerification = async (req, res) => {
         // Send the actual token by email
         await sendVerificationEmail(
             normalizedEmail,
-            token
+            token,
+            user.preferred_name || user.first_name
         );
 
         const response = {
