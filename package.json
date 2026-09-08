@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "migrate": "node database/runMigrations.js",
-    "reminders": "node jobs/sendReminders.js"
+    "reminders": "node jobs/sendReminders.js",
+    "report:weekly": "node jobs/sendReports.js weekly",
+    "report:monthly": "node jobs/sendReports.js monthly"
   },
   "keywords": [],
   "author": "",

@@ -361,6 +361,288 @@ const renderReminderEmail = ({ name, appUrl, frequency }) => {
 };
 
 
+// Turn a distribution object ({ label: count }) into HTML table rows.
+const distributionRowsHtml = (distribution) => {
+    return Object.entries(distribution)
+        .map(
+            ([label, count]) => `
+                <tr>
+                    <td style="
+                        padding: 6px 10px;
+                        border-bottom: 1px solid #eeeeee;
+                        color: #555555;
+                    ">${label}</td>
+                    <td style="
+                        padding: 6px 10px;
+                        border-bottom: 1px solid #eeeeee;
+                        text-align: right;
+                        font-weight: bold;
+                    ">${count}</td>
+                </tr>
+            `
+        )
+        .join("");
+};
+
+
+// Turn a distribution object into plain-text lines.
+const distributionLinesText = (distribution) => {
+    return Object.entries(distribution)
+        .map(([label, count]) => `    ${label}: ${count}`)
+        .join("\n");
+};
+
+
+// Render a plain-figures report of a tracking summary. No commentary or
+// interpretation is added — the email presents the recorded numbers only.
+const renderReportEmail = ({ name, appUrl, period, summary }) => {
+    const logo = resolveLogo();
+    const greetingName = name ? ` ${name}` : "";
+    const year = new Date().getFullYear();
+
+    const periodLabel = period === "weekly" ? "Weekly" : "Monthly";
+
+    const dash = "—";
+
+    const nightAvg =
+        summary.nightTimeUrination.averagePerNight === null
+            ? dash
+            : summary.nightTimeUrination.averagePerNight;
+
+    const stressAvg =
+        summary.stressLevel.average === null
+            ? dash
+            : summary.stressLevel.average;
+
+    const sleepAvg =
+        summary.sleepQuality.average === null
+            ? dash
+            : summary.sleepQuality.average;
+
+
+    const sectionTable = (title, rowsHtml) => `
+        <h3 style="
+            font-size: 15px;
+            color: #1b5faa;
+            margin: 24px 0 8px;
+        ">${title}</h3>
+        <table
+            role="presentation"
+            cellpadding="0"
+            cellspacing="0"
+            width="100%"
+            style="font-size: 14px; border-collapse: collapse;"
+        >
+            ${rowsHtml}
+        </table>
+    `;
+
+    const metricRow = (label, value) => `
+        <tr>
+            <td style="
+                padding: 6px 10px;
+                border-bottom: 1px solid #eeeeee;
+                color: #555555;
+            ">${label}</td>
+            <td style="
+                padding: 6px 10px;
+                border-bottom: 1px solid #eeeeee;
+                text-align: right;
+                font-weight: bold;
+            ">${value}</td>
+        </tr>
+    `;
+
+
+    const html = `
+        <div style="
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333333;
+            background: #ffffff;
+        ">
+            <!-- Header band -->
+            <div style="
+                background: linear-gradient(90deg, #12a19a 0%, #1b5faa 100%);
+                background-color: #1b5faa;
+                padding: 24px 28px;
+                color: #ffffff;
+            ">
+                <div style="font-size: 22px; font-weight: bold;">
+                    BladderSense
+                </div>
+                <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">
+                    ${periodLabel} Tracking Report
+                </div>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 28px;">
+                <p style="font-size: 18px; font-weight: bold; margin: 0 0 8px;">
+                    Dear${greetingName},
+                </p>
+
+                <p style="font-size: 14px; margin: 0 0 4px;">
+                    Here is your ${periodLabel.toLowerCase()} tracking
+                    report.
+                </p>
+                <p style="font-size: 14px; color: #777777; margin: 0 0 8px;">
+                    Period: ${summary.period.startDate} to
+                    ${summary.period.endDate}
+                    (${summary.period.days} days)
+                </p>
+
+                ${sectionTable(
+                    "Adherence",
+                    metricRow(
+                        "Days tracked",
+                        `${summary.adherence.daysTracked} of ` +
+                        `${summary.adherence.expectedDays} ` +
+                        `(${summary.adherence.percent}%)`
+                    )
+                )}
+
+                ${sectionTable(
+                    "Night-time urination",
+                    metricRow("Average per night", nightAvg) +
+                    distributionRowsHtml(
+                        summary.nightTimeUrination.distribution
+                    )
+                )}
+
+                ${sectionTable(
+                    "Evening fluids",
+                    distributionRowsHtml(
+                        summary.eveningFluids.distribution
+                    )
+                )}
+
+                ${sectionTable(
+                    "Activity level",
+                    distributionRowsHtml(
+                        summary.activityLevel.distribution
+                    )
+                )}
+
+                ${sectionTable(
+                    "Stress level",
+                    metricRow("Average (1-5)", stressAvg)
+                )}
+
+                ${sectionTable(
+                    "Sleep quality",
+                    metricRow("Average (Poor 1 - Good 3)", sleepAvg) +
+                    distributionRowsHtml(
+                        summary.sleepQuality.distribution
+                    )
+                )}
+
+                ${
+                    appUrl
+                        ? `
+                            <p style="font-size: 14px; margin: 28px 0 0;">
+                                <a href="${appUrl}" style="color: #1b5faa;">
+                                    Open BladderSense
+                                </a>
+                            </p>
+                        `
+                        : ""
+                }
+
+                <p style="font-size: 14px; margin: 24px 0 0;">
+                    Best regards,<br />
+                    <strong>BladderSense</strong>
+                </p>
+
+                <p style="font-size: 12px; color: #999999; margin: 28px 0 0;">
+                    This email cannot receive replies.
+                </p>
+            </div>
+
+            <!-- Footer band -->
+            <div style="
+                background: #111111;
+                color: #ffffff;
+                padding: 18px 28px;
+                font-size: 12px;
+            ">
+                &copy; BladderSense ${year}.<br />
+                All Rights Reserved
+            </div>
+        </div>
+    `;
+
+    const text =
+        `Dear${greetingName},\n\n` +
+        `Here is your ${periodLabel.toLowerCase()} tracking report.\n` +
+        `Period: ${summary.period.startDate} to ` +
+        `${summary.period.endDate} (${summary.period.days} days)\n\n` +
+        `Adherence\n` +
+        `    Days tracked: ${summary.adherence.daysTracked} of ` +
+        `${summary.adherence.expectedDays} ` +
+        `(${summary.adherence.percent}%)\n\n` +
+        `Night-time urination\n` +
+        `    Average per night: ${nightAvg}\n` +
+        `${distributionLinesText(
+            summary.nightTimeUrination.distribution
+        )}\n\n` +
+        `Evening fluids\n` +
+        `${distributionLinesText(summary.eveningFluids.distribution)}\n\n` +
+        `Activity level\n` +
+        `${distributionLinesText(summary.activityLevel.distribution)}\n\n` +
+        `Stress level\n` +
+        `    Average (1-5): ${stressAvg}\n\n` +
+        `Sleep quality\n` +
+        `    Average (Poor 1 - Good 3): ${sleepAvg}\n` +
+        `${distributionLinesText(summary.sleepQuality.distribution)}\n\n` +
+        `Best regards,\nBladderSense`;
+
+    return {
+        html,
+        text,
+        attachments: logo.attachments
+    };
+};
+
+
+// Send a tracking report email (weekly or monthly). The report contains
+// the recorded figures only.
+const sendReportEmail = async (email, name, options = {}) => {
+
+    const { period = "monthly", summary } = options;
+    const appUrl = process.env.FRONTEND_URL || "";
+
+    if (process.env.EMAIL_ENABLED !== "true") {
+        console.log(
+            `[EMAIL DISABLED] ${period} report for ${email}`
+        );
+
+        return;
+    }
+
+    const { html, text, attachments } = renderReportEmail({
+        name,
+        appUrl,
+        period,
+        summary
+    });
+
+    const periodLabel = period === "weekly" ? "weekly" : "monthly";
+
+    await transporter.sendMail({
+        from: `"BladderSense" <${process.env.EMAIL_FROM}>`,
+        to: email,
+        subject: `Your BladderSense ${periodLabel} report`,
+        text,
+        html,
+        attachments
+    });
+
+    console.log(`${period} report email sent to ${email}`);
+};
+
+
 // Send a tracking reminder email.
 const sendReminderEmail = async (email, name, options = {}) => {
 
@@ -461,5 +743,6 @@ const sendLoginEmail = async (email, token, name) => {
 module.exports = {
     sendVerificationEmail,
     sendLoginEmail,
-    sendReminderEmail
+    sendReminderEmail,
+    sendReportEmail
 };
