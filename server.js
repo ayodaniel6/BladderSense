@@ -10,6 +10,8 @@ const profileRoutes = require("./routes/profileRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
 const reminderRoutes = require("./routes/reminderRoutes");
 
+const { startScheduler } = require("./scheduler");
+
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -62,4 +64,7 @@ app.listen(PORT, () => {
     console.log(
         `BladderSense server running on port ${PORT}`
     );
+
+    // Start the automated reminder/report scheduler.
+    startScheduler();
 });

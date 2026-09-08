@@ -90,81 +90,91 @@ const fetchEntriesByUser = async (periodDays) => {
 };
 
 
+// Core report run for a period. Does NOT close the database pool, so the
+// in-process scheduler can call it repeatedly. The CLI entry point below
+// closes the pool itself.
 const runReports = async (period) => {
-    try {
-        const periodDays = PERIODS[period];
+    const periodDays = PERIODS[period];
 
-        console.log(
-            `Starting ${period} report run (${periodDays} days)...`
+    if (!periodDays) {
+        throw new Error(
+            `Unknown report period: ${period}`
         );
-
-        const users = await fetchEntriesByUser(periodDays);
-
-        console.log(
-            `${users.length} user(s) with tracking data in the window.`
-        );
-
-        let sent = 0;
-        let failed = 0;
-
-        for (const user of users) {
-            const name = user.preferredName || user.firstName;
-
-            const summary = buildTrackingSummary(
-                user.entries,
-                periodDays,
-                new Date()
-            );
-
-            try {
-
-                await sendReportEmail(user.email, name, {
-                    period,
-                    summary
-                });
-
-                sent += 1;
-
-            } catch (sendError) {
-
-                failed += 1;
-
-                console.error(
-                    `Failed to send ${period} report to ` +
-                    `${user.email}:`,
-                    sendError
-                );
-            }
-        }
-
-        console.log(
-            `${period} report run complete. ` +
-            `Sent: ${sent}, Failed: ${failed}.`
-        );
-
-    } catch (error) {
-
-        console.error(`${period} report run failed:`, error);
-
-        process.exitCode = 1;
-
-    } finally {
-
-        await pool.end();
     }
+
+    console.log(
+        `Starting ${period} report run (${periodDays} days)...`
+    );
+
+    const users = await fetchEntriesByUser(periodDays);
+
+    console.log(
+        `${users.length} user(s) with tracking data in the window.`
+    );
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const user of users) {
+        const name = user.preferredName || user.firstName;
+
+        const summary = buildTrackingSummary(
+            user.entries,
+            periodDays,
+            new Date()
+        );
+
+        try {
+
+            await sendReportEmail(user.email, name, {
+                period,
+                summary
+            });
+
+            sent += 1;
+
+        } catch (sendError) {
+
+            failed += 1;
+
+            console.error(
+                `Failed to send ${period} report to ` +
+                `${user.email}:`,
+                sendError
+            );
+        }
+    }
+
+    console.log(
+        `${period} report run complete. ` +
+        `Sent: ${sent}, Failed: ${failed}.`
+    );
+
+    return { sent, failed };
 };
 
 
-const period = (process.argv[2] || "").toLowerCase();
+module.exports = { runReports, fetchEntriesByUser, PERIODS };
 
-if (!PERIODS[period]) {
-    console.error(
-        "Usage: node jobs/sendReports.js <weekly|monthly>"
-    );
 
-    process.exitCode = 1;
+// Allow running by hand: `node jobs/sendReports.js <weekly|monthly>`.
+if (require.main === module) {
+    const period = (process.argv[2] || "").toLowerCase();
 
-} else {
+    if (!PERIODS[period]) {
+        console.error(
+            "Usage: node jobs/sendReports.js <weekly|monthly>"
+        );
 
-    runReports(period);
+        process.exitCode = 1;
+
+    } else {
+
+        runReports(period)
+            .catch((error) => {
+                console.error(`${period} report run failed:`, error);
+                process.exitCode = 1;
+            })
+            .finally(() => pool.end());
+    }
 }

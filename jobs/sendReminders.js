@@ -87,68 +87,72 @@ const findUsersDueForReminder = async () => {
 };
 
 
+// Core reminder run. Does NOT close the database pool, so it can be
+// called repeatedly by the in-process scheduler while the server keeps
+// running. The standalone CLI entry point below closes the pool itself.
 const runReminders = async () => {
-    try {
-        console.log("Starting tracking reminder run...");
+    console.log("Starting tracking reminder run...");
 
-        const users = await findUsersDueForReminder();
+    const users = await findUsersDueForReminder();
 
-        console.log(
-            `${users.length} user(s) due for a reminder.`
-        );
+    console.log(
+        `${users.length} user(s) due for a reminder.`
+    );
 
-        let sent = 0;
-        let failed = 0;
+    let sent = 0;
+    let failed = 0;
 
-        for (const user of users) {
-            const name = user.preferred_name || user.first_name;
+    for (const user of users) {
+        const name = user.preferred_name || user.first_name;
 
-            try {
+        try {
 
-                await sendReminderEmail(user.email, name, {
-                    frequency: user.frequency
-                });
+            await sendReminderEmail(user.email, name, {
+                frequency: user.frequency
+            });
 
-                // Only record the send once the email succeeds so a
-                // transient failure does not silently skip a user until
-                // the next cadence.
-                await pool.query(
-                    `
-                    UPDATE reminder_preferences
-                    SET last_reminded_at = NOW()
-                    WHERE user_id = $1
-                    `,
-                    [user.id]
-                );
+            // Only record the send once the email succeeds so a
+            // transient failure does not silently skip a user until
+            // the next cadence.
+            await pool.query(
+                `
+                UPDATE reminder_preferences
+                SET last_reminded_at = NOW()
+                WHERE user_id = $1
+                `,
+                [user.id]
+            );
 
-                sent += 1;
+            sent += 1;
 
-            } catch (sendError) {
+        } catch (sendError) {
 
-                failed += 1;
+            failed += 1;
 
-                console.error(
-                    `Failed to send reminder to ${user.email}:`,
-                    sendError
-                );
-            }
+            console.error(
+                `Failed to send reminder to ${user.email}:`,
+                sendError
+            );
         }
-
-        console.log(
-            `Reminder run complete. Sent: ${sent}, Failed: ${failed}.`
-        );
-
-    } catch (error) {
-
-        console.error("Reminder run failed:", error);
-
-        process.exitCode = 1;
-
-    } finally {
-
-        await pool.end();
     }
+
+    console.log(
+        `Reminder run complete. Sent: ${sent}, Failed: ${failed}.`
+    );
+
+    return { sent, failed };
 };
 
 
-runReminders();
+module.exports = { runReminders, findUsersDueForReminder };
+
+
+// Allow running by hand: `node jobs/sendReminders.js`.
+if (require.main === module) {
+    runReminders()
+        .catch((error) => {
+            console.error("Reminder run failed:", error);
+            process.exitCode = 1;
+        })
+        .finally(() => pool.end());
+}
