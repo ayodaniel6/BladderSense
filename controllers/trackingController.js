@@ -4,6 +4,18 @@ const {
     validateTrackingEntry
 } = require("../utils/trackingValidation");
 
+const {
+    buildTrackingSummary
+} = require("../utils/trackingSummary");
+
+
+// Default tracking window. The doctor's guidance is a 30-day tracking
+// period with a monthly progress summary; callers may request a
+// different window with ?days= (bounded to a sensible range).
+const DEFAULT_SUMMARY_DAYS = 30;
+const MAX_SUMMARY_DAYS = 90;
+const MIN_SUMMARY_DAYS = 1;
+
 
 const createTrackingEntry = async (req, res) => {
     try {
@@ -270,8 +282,72 @@ const updateTrackingEntry = async (req, res) => {
 };
 
 
+const getTrackingSummary = async (req, res) => {
+    try {
+
+        // Resolve and clamp the requested window length.
+        let periodDays = Number.parseInt(req.query.days, 10);
+
+        if (!Number.isFinite(periodDays)) {
+            periodDays = DEFAULT_SUMMARY_DAYS;
+        }
+
+        periodDays = Math.min(
+            Math.max(periodDays, MIN_SUMMARY_DAYS),
+            MAX_SUMMARY_DAYS
+        );
+
+
+        // Pull only the entries that fall inside the window. The window
+        // ends today and spans `periodDays` days (inclusive).
+        const result = await pool.query(
+            `
+            SELECT
+                id,
+                entry_date,
+                night_time_urination,
+                evening_fluids,
+                activity_level,
+                stress_level,
+                sleep_quality,
+                notes,
+                updated_at
+            FROM tracking_entries
+            WHERE user_id = $1
+              AND entry_date >= (CURRENT_DATE - ($2::int - 1))
+              AND entry_date <= CURRENT_DATE
+            ORDER BY entry_date ASC
+            `,
+            [req.user.id, periodDays]
+        );
+
+
+        const summary = buildTrackingSummary(
+            result.rows,
+            periodDays,
+            new Date()
+        );
+
+
+        res.json({ summary });
+
+    } catch (error) {
+
+        console.error(
+            "Get tracking summary error:",
+            error
+        );
+
+        res.status(500).json({
+            error: "Failed to generate tracking summary"
+        });
+    }
+};
+
+
 module.exports = {
     createTrackingEntry,
     getTrackingEntries,
-    updateTrackingEntry
+    updateTrackingEntry,
+    getTrackingSummary
 };

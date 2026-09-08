@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes");
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
+const reminderRoutes = require("./routes/reminderRoutes");
 
 const app = express();
 
@@ -50,6 +51,7 @@ app.use("/api", userRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api", profileRoutes);
 app.use("/api", trackingRoutes);
+app.use("/api", reminderRoutes);
 
 
 // ============================================================

@@ -216,6 +216,185 @@ const renderOtpEmail = ({ name, code, intro }) => {
 };
 
 
+// Render a branded tracking reminder email. Mirrors the header/footer
+// styling of the OTP email but carries a call-to-action to return to the
+// app and log a tracking entry.
+const renderReminderEmail = ({ name, appUrl, frequency }) => {
+    const logo = resolveLogo();
+    const greetingName = name ? ` ${name}` : "";
+    const year = new Date().getFullYear();
+
+    const cadenceLine =
+        frequency === "weekly"
+            ? "It's the start of a new week — a great time to check in " +
+              "on your bladder health."
+            : "This is your daily reminder to log today's entry.";
+
+    const ctaButton = appUrl
+        ? `
+            <div style="text-align: center; margin: 28px 0;">
+                <a
+                    href="${appUrl}"
+                    style="
+                        display: inline-block;
+                        background: #1b5faa;
+                        color: #ffffff;
+                        text-decoration: none;
+                        font-size: 16px;
+                        font-weight: bold;
+                        padding: 14px 28px;
+                        border-radius: 6px;
+                    "
+                >
+                    Track today
+                </a>
+            </div>
+        `
+        : "";
+
+    const html = `
+        <div style="
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #333333;
+            background: #ffffff;
+        ">
+            <!-- Header band -->
+            <div style="
+                background: linear-gradient(90deg, #12a19a 0%, #1b5faa 100%);
+                background-color: #1b5faa;
+                padding: 24px 28px;
+                color: #ffffff;
+            ">
+                <div style="font-size: 22px; font-weight: bold;">
+                    BladderSense
+                </div>
+                <div style="font-size: 13px; opacity: 0.9; margin-top: 4px;">
+                    Bladder Health Tracking &amp; Support
+                </div>
+            </div>
+
+            <!-- Brand row -->
+            <div style="
+                padding: 24px 28px;
+                border-bottom: 1px solid #eeeeee;
+            ">
+                <table role="presentation" cellpadding="0" cellspacing="0">
+                    <tr>
+                        <td style="padding-right: 14px; vertical-align: middle;">
+                            ${logo.html}
+                        </td>
+                        <td style="vertical-align: middle;">
+                            <div style="
+                                font-size: 22px;
+                                font-weight: bold;
+                                color: #1b5faa;
+                            ">
+                                BladderSense
+                            </div>
+                            <div style="font-size: 13px; color: #777777;">
+                                Tracking Reminder
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- Body -->
+            <div style="padding: 28px;">
+                <p style="font-size: 20px; font-weight: bold; margin: 0 0 16px;">
+                    Dear${greetingName},
+                </p>
+
+                <p style="font-size: 15px; margin: 0 0 20px;">
+                    ${cadenceLine} Consistent tracking helps you and your
+                    care team spot patterns and measure your progress.
+                </p>
+
+                ${ctaButton}
+
+                <p style="font-size: 15px; margin: 0 0 8px;">
+                    You are receiving this because tracking reminders are
+                    switched on for your account. You can turn them off at
+                    any time from your reminder settings.
+                </p>
+
+                <p style="font-size: 15px; margin: 24px 0 0;">
+                    Best regards,<br />
+                    <strong>BladderSense</strong>
+                </p>
+
+                <p style="font-size: 12px; color: #999999; margin: 28px 0 0;">
+                    This email cannot receive replies.
+                </p>
+            </div>
+
+            <!-- Footer band -->
+            <div style="
+                background: #111111;
+                color: #ffffff;
+                padding: 18px 28px;
+                font-size: 12px;
+            ">
+                &copy; BladderSense ${year}.<br />
+                All Rights Reserved
+            </div>
+        </div>
+    `;
+
+    const text =
+        `Dear${greetingName},\n\n` +
+        `${cadenceLine} Consistent tracking helps you and your care ` +
+        `team spot patterns and measure your progress.\n\n` +
+        (appUrl ? `Track today: ${appUrl}\n\n` : "") +
+        `You are receiving this because tracking reminders are switched ` +
+        `on for your account. You can turn them off at any time from ` +
+        `your reminder settings.\n\n` +
+        `Best regards,\nBladderSense`;
+
+    return {
+        html,
+        text,
+        attachments: logo.attachments
+    };
+};
+
+
+// Send a tracking reminder email.
+const sendReminderEmail = async (email, name, options = {}) => {
+
+    const { frequency = "daily" } = options;
+    const appUrl = process.env.FRONTEND_URL || "";
+
+    if (process.env.EMAIL_ENABLED !== "true") {
+        console.log(
+            `[EMAIL DISABLED] Tracking reminder for ${email} ` +
+            `(frequency: ${frequency})`
+        );
+
+        return;
+    }
+
+    const { html, text, attachments } = renderReminderEmail({
+        name,
+        appUrl,
+        frequency
+    });
+
+    await transporter.sendMail({
+        from: `"BladderSense" <${process.env.EMAIL_FROM}>`,
+        to: email,
+        subject: "Time to track with BladderSense",
+        text,
+        html,
+        attachments
+    });
+
+    console.log(`Reminder email sent to ${email}`);
+};
+
+
 // Send verification email
 const sendVerificationEmail = async (email, token, name) => {
 
@@ -281,5 +460,6 @@ const sendLoginEmail = async (email, token, name) => {
 
 module.exports = {
     sendVerificationEmail,
-    sendLoginEmail
+    sendLoginEmail,
+    sendReminderEmail
 };

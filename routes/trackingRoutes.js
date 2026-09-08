@@ -5,7 +5,8 @@ const requireAuth = require("../middleware/authMiddleware");
 const {
     createTrackingEntry,
     getTrackingEntries,
-    updateTrackingEntry
+    updateTrackingEntry,
+    getTrackingSummary
 } = require("../controllers/trackingController");
 
 const router = express.Router();
@@ -21,6 +22,12 @@ router.get(
     "/tracking",
     requireAuth,
     getTrackingEntries
+);
+
+router.get(
+    "/tracking/summary",
+    requireAuth,
+    getTrackingSummary
 );
 
 router.put(

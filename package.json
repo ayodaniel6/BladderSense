@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node server.js",
-    "migrate": "node database/runMigrations.js"
+    "migrate": "node database/runMigrations.js",
+    "reminders": "node jobs/sendReminders.js"
   },
   "keywords": [],
   "author": "",
