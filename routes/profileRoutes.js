@@ -4,7 +4,8 @@ const requireAuth = require("../middleware/authMiddleware");
 
 const {
     getProfile,
-    updateProfile
+    updateProfile,
+    deleteAccount
 } = require("../controllers/profileController");
 
 const router = express.Router();
@@ -19,6 +20,12 @@ router.put(
     "/profile",
     requireAuth,
     updateProfile
+);
+
+router.delete(
+    "/profile",
+    requireAuth,
+    deleteAccount
 );
 
 module.exports = router;

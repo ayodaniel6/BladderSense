@@ -110,7 +110,79 @@ const updateProfile = async (req, res) => {
     }
 };
 
+const deleteAccount = async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        await client.query("BEGIN");
+
+        /*
+         * Permanently remove everything belonging to the signed-in user.
+         * The user is identified from the session (req.user.id), never
+         * from the request body, so one user can never delete another.
+         *
+         * Children are deleted explicitly (and before the user row) so
+         * the account is fully purged even if a foreign-key cascade is
+         * missing in a given environment.
+         */
+        await client.query(
+            "DELETE FROM tracking_entries WHERE user_id = $1",
+            [req.user.id]
+        );
+
+        await client.query(
+            "DELETE FROM reminder_preferences WHERE user_id = $1",
+            [req.user.id]
+        );
+
+        await client.query(
+            "DELETE FROM auth_tokens WHERE user_id = $1",
+            [req.user.id]
+        );
+
+        await client.query(
+            "DELETE FROM sessions WHERE user_id = $1",
+            [req.user.id]
+        );
+
+        await client.query(
+            "DELETE FROM users WHERE id = $1",
+            [req.user.id]
+        );
+
+        await client.query("COMMIT");
+
+        // Expire the session cookie so the browser is signed out.
+        res.clearCookie("bladdersense_session");
+
+        return res.json({
+            message: "Your account has been deleted."
+        });
+
+    } catch (error) {
+
+        try {
+            await client.query("ROLLBACK");
+        } catch (rollbackError) {
+            console.error(
+                "Delete account rollback error:",
+                rollbackError
+            );
+        }
+
+        console.error("Delete account error:", error);
+
+        return res.status(500).json({
+            error: "Failed to delete account"
+        });
+
+    } finally {
+        client.release();
+    }
+};
+
 module.exports = {
     getProfile,
-    updateProfile
+    updateProfile,
+    deleteAccount
 };
