@@ -17,18 +17,27 @@ admin browse, inspect and manage users.
 1. **Run the migration** — `database/migrations/007_add_user_admin_flag.sql`
    adds `users.is_admin BOOLEAN NOT NULL DEFAULT FALSE`.
    Heroku runs it automatically in the `release` phase (`npm run migrate`).
-2. **Promote the first admin** (the account must already be registered):
+2. **Set the admin emails** as a config var (comma-separated). Heroku
+   restarts the app when a config var changes:
    ```bash
-   npm run make-admin -- someone@example.com
-   # Heroku:
-   heroku run npm run make-admin -- someone@example.com
-   # Revoke:
-   npm run make-admin -- someone@example.com --revoke
+   heroku config:set ADMIN_EMAILS=owner@example.com,colleague@example.com
    ```
-   After that, admins can promote/demote others from the dashboard.
+   Listed accounts become admins when the server starts, or on their
+   first sign-in if they register later. Removing an email from the list
+   does **not** demote it; use the dashboard or `--revoke` below.
+
+   Alternatively, promote one existing account directly:
+   ```bash
+   heroku run npm run make-admin -- someone@example.com
+   heroku run npm run make-admin -- someone@example.com --revoke
+   ```
 3. Open `https://<api-host>/admin` and sign in with that email.
 
-No new environment variables or dependencies.
+| Env var | Required | Example |
+| --- | --- | --- |
+| `ADMIN_EMAILS` | No | `owner@example.com,colleague@example.com` |
+
+No new dependencies.
 
 
 ## ⚠️ Behaviour change: `/api/users` is now admin-only
@@ -76,6 +85,7 @@ Frontend details: [`ADMIN_FRONTEND.md`](./ADMIN_FRONTEND.md).
 | `controllers/profileController.js` | `isAdmin` in the profile response |
 | `docs/ADMIN_FRONTEND.md` | Frontend integration guide |
 | `scripts/makeAdmin.js` | `npm run make-admin` CLI |
+| `utils/adminEmails.js` | Applies `ADMIN_EMAILS` at startup and sign-in |
 | `server.js` | Mounts admin routes and serves `public/admin` at `/admin` |
 | `public/admin/*` | The dashboard page (no build step, no framework) |
 

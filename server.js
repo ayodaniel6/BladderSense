@@ -13,6 +13,7 @@ const reminderRoutes = require("./routes/reminderRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 
 const { startScheduler } = require("./scheduler");
+const { syncAdminEmails } = require("./utils/adminEmails");
 
 const app = express();
 
@@ -80,4 +81,7 @@ app.listen(PORT, () => {
 
     // Start the automated reminder/report scheduler.
     startScheduler();
+
+    // Promote any accounts listed in ADMIN_EMAILS.
+    syncAdminEmails();
 });
