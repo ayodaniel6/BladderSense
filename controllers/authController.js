@@ -12,6 +12,10 @@ const {
     sendLoginEmail
 } = require("../services/emailService");
 
+const {
+    isConfiguredAdmin
+} = require("../utils/adminEmails");
+
 
 // ============================================================
 // REGISTER
@@ -471,6 +475,20 @@ const verifyLogin = async (req, res) => {
         }
 
         const user = userResult.rows[0];
+
+        // Accounts listed in ADMIN_EMAILS become admins on sign-in.
+        if (!user.is_admin && isConfiguredAdmin(user.email)) {
+            await client.query(
+                `
+                UPDATE users
+                SET is_admin = TRUE
+                WHERE id = $1
+                `,
+                [user.id]
+            );
+
+            user.is_admin = true;
+        }
 
         const tokenResult = await client.query(
             `
