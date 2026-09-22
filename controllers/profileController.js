@@ -8,7 +8,8 @@ const formatUser = (user) => ({
     email: user.email,
     emailVerified: user.email_verified,
     createdAt: user.created_at,
-    lastLoginAt: user.last_login_at
+    lastLoginAt: user.last_login_at,
+    isAdmin: user.is_admin
 });
 
 const getProfile = async (req, res) => {
@@ -22,6 +23,7 @@ const getProfile = async (req, res) => {
                 preferred_name,
                 email,
                 email_verified,
+                is_admin,
                 created_at,
                 last_login_at
             FROM users
@@ -82,6 +84,7 @@ const updateProfile = async (req, res) => {
                 preferred_name,
                 email,
                 email_verified,
+                is_admin,
                 created_at,
                 last_login_at
             `,
