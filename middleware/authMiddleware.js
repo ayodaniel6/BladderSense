@@ -21,7 +21,8 @@ const requireAuth = async (req, res, next) => {
                 users.last_name,
                 users.preferred_name,
                 users.email,
-                users.email_verified
+                users.email_verified,
+                users.is_admin
             FROM sessions
             INNER JOIN users
                 ON sessions.user_id = users.id
@@ -65,7 +66,8 @@ const requireAuth = async (req, res, next) => {
             lastName: user.last_name,
             preferredName: user.preferred_name,
             email: user.email,
-            emailVerified: user.email_verified
+            emailVerified: user.email_verified,
+            isAdmin: user.is_admin
         };
 
         // Continue to the next middleware/controller

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>BladderSense Admin</title>
+    <link rel="stylesheet" href="admin.css">
+    <script src="admin.js" defer></script>
+</head>
+<body>
+
+    <!-- ========================================================
+         SIGN IN
+         ======================================================== -->
+    <main id="login-view" class="login" hidden>
+        <div class="login-card">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span>BladderSense <strong>Admin</strong></span>
+            </div>
+
+            <form id="email-form" class="stack">
+                <h1>Sign in</h1>
+                <p class="muted">We'll email you a 6-digit code.</p>
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" autocomplete="email" required>
+                <button type="submit" class="btn btn-primary">Send code</button>
+            </form>
+
+            <form id="code-form" class="stack" hidden>
+                <h1>Check your email</h1>
+                <p class="muted">Enter the code sent to <strong id="code-email"></strong>.</p>
+                <label for="login-code">6-digit code</label>
+                <input id="login-code" inputmode="numeric" autocomplete="one-time-code"
+                       pattern="[0-9]{6}" maxlength="6" required>
+                <button type="submit" class="btn btn-primary">Sign in</button>
+                <button type="button" id="code-back" class="btn btn-link">Use a different email</button>
+            </form>
+
+            <p id="login-error" class="error" role="alert" hidden></p>
+        </div>
+    </main>
+
+
+    <!-- ========================================================
+         NOT AN ADMIN
+         ======================================================== -->
+    <main id="denied-view" class="login" hidden>
+        <div class="login-card stack">
+            <h1>No admin access</h1>
+            <p class="muted">
+                You're signed in as <strong id="denied-email"></strong>, but this
+                account isn't an admin. Ask the backend developer to run
+                <code>npm run make-admin -- your@email</code>.
+            </p>
+            <button type="button" id="denied-logout" class="btn">Sign out</button>
+        </div>
+    </main>
+
+
+    <!-- ========================================================
+         DASHBOARD
+         ======================================================== -->
+    <div id="app-view" hidden>
+        <header class="topbar">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span>BladderSense <strong>Admin</strong></span>
+            </div>
+            <div class="topbar-right">
+                <button type="button" id="refresh" class="btn btn-small">Refresh</button>
+                <button type="button" id="logout" class="btn btn-small">Sign out</button>
+            </div>
+        </header>
+
+        <main class="content">
+            <section aria-labelledby="overview-title">
+                <h2 id="overview-title">Overview</h2>
+                <div id="stats" class="stats"></div>
+            </section>
+
+            <section class="panel" aria-labelledby="activity-title">
+                <div class="panel-head">
+                    <h2 id="activity-title">Last 14 days</h2>
+                    <div class="legend">
+                        <span><i class="swatch swatch-entries"></i>Tracking entries</span>
+                        <span><i class="swatch swatch-signups"></i>Sign-ups</span>
+                    </div>
+                </div>
+                <div id="activity" class="activity"></div>
+            </section>
+
+            <section class="panel" aria-labelledby="users-title">
+                <div class="panel-head">
+                    <h2 id="users-title">Users</h2>
+                    <form id="user-filters" class="filters">
+                        <input id="user-search" type="search" placeholder="Search name or email"
+                               aria-label="Search users">
+                        <select id="user-status" aria-label="Filter users">
+                            <option value="">All users</option>
+                            <option value="verified">Verified</option>
+                            <option value="unverified">Unverified</option>
+                            <option value="admin">Admins</option>
+                        </select>
+                    </form>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="users">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th class="num">Entries</th>
+                                <th>Last entry</th>
+                                <th>Joined</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-body"></tbody>
+                    </table>
+                </div>
+
+                <div class="pager">
+                    <span id="pager-info" class="muted"></span>
+                    <div>
+                        <button type="button" id="prev-page" class="btn btn-small">Previous</button>
+                        <button type="button" id="next-page" class="btn btn-small">Next</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+
+    <!-- ========================================================
+         USER DETAIL DRAWER
+         ======================================================== -->
+    <div id="drawer-backdrop" class="backdrop" hidden></div>
+    <aside id="drawer" class="drawer" aria-labelledby="drawer-title" hidden>
+        <div class="drawer-head">
+            <h2 id="drawer-title">User</h2>
+            <button type="button" id="drawer-close" class="btn btn-small" aria-label="Close">Close</button>
+        </div>
+        <div id="drawer-body" class="drawer-body"></div>
+    </aside>
+
+    <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

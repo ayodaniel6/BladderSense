@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const helmet = require("helmet");
@@ -9,6 +10,7 @@ const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
 const reminderRoutes = require("./routes/reminderRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const { startScheduler } = require("./scheduler");
 
@@ -54,6 +56,17 @@ app.use("/api/auth", authRoutes);
 app.use("/api", profileRoutes);
 app.use("/api", trackingRoutes);
 app.use("/api", reminderRoutes);
+app.use("/api/admin", adminRoutes);
+
+
+// ============================================================
+// ADMIN DASHBOARD (static page, data comes from /api/admin)
+// ============================================================
+
+app.use(
+    "/admin",
+    express.static(path.join(__dirname, "public", "admin"))
+);
 
 
 // ============================================================
