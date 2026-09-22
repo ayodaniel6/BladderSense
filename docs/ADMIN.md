@@ -42,6 +42,26 @@ If the frontend or any script relies on them, switch it to
 `GET /api/admin/users` / the normal `/api/auth/register` flow.
 
 
+## ⚠️ Security fix: login/verification codes were returned in production
+
+`POST /api/auth/request-login` returned the 6-digit login code in its JSON
+response (`loginToken`) in **every** environment. Anyone who knew a user's
+email could sign in as them, admins included. `POST /api/auth/register`
+did the same with `verificationToken`.
+
+Both are now only included when `NODE_ENV !== "production"`, which matches
+what `resend-verification` already did. In production the code arrives only
+by email. If the frontend auto-filled the code from the response, it needs
+to ask the user to type it instead.
+
+
+## `isAdmin` in user responses
+
+`POST /api/auth/verify-login` and `GET /api/profile` now include
+`user.isAdmin`, so the frontend can show or hide admin navigation.
+Frontend details: [`ADMIN_FRONTEND.md`](./ADMIN_FRONTEND.md).
+
+
 ## Files
 
 | File | Purpose |
@@ -52,6 +72,9 @@ If the frontend or any script relies on them, switch it to
 | `controllers/adminController.js` | Admin endpoint handlers |
 | `routes/adminRoutes.js` | Mounts `/api/admin/*` behind `requireAuth` + `requireAdmin` |
 | `routes/userRoutes.js` | `/api/users` locked to admins |
+| `controllers/authController.js` | Codes returned in dev only; `isAdmin` in the login response |
+| `controllers/profileController.js` | `isAdmin` in the profile response |
+| `docs/ADMIN_FRONTEND.md` | Frontend integration guide |
 | `scripts/makeAdmin.js` | `npm run make-admin` CLI |
 | `server.js` | Mounts admin routes and serves `public/admin` at `/admin` |
 | `public/admin/*` | The dashboard page (no build step, no framework) |

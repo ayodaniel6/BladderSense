@@ -134,7 +134,11 @@ const register = async (req, res) => {
                 emailVerified: false
             },
 
-            verificationToken: token
+            // Development only: never return the code in production,
+            // it must only reach the user by email.
+            ...(process.env.NODE_ENV !== "production" && {
+                verificationToken: token
+            })
         });
 
     } catch (error) {
@@ -389,7 +393,11 @@ const requestLogin = async (req, res) => {
         res.json({
             message: "Login token generated",
 
-            loginToken: token
+            // Development only: returning the code in production would
+            // let anyone sign in as any user just by knowing their email.
+            ...(process.env.NODE_ENV !== "production" && {
+                loginToken: token
+            })
         });
 
     } catch (error) {
@@ -445,7 +453,8 @@ const verifyLogin = async (req, res) => {
                 first_name,
                 last_name,
                 preferred_name,
-                email
+                email,
+                is_admin
             FROM users
             WHERE email = $1
               AND email_verified = TRUE
@@ -560,7 +569,8 @@ const verifyLogin = async (req, res) => {
                 firstName: user.first_name,
                 lastName: user.last_name,
                 preferredName: user.preferred_name,
-                email: user.email
+                email: user.email,
+                isAdmin: user.is_admin
             }
         });
 
