@@ -4,7 +4,8 @@ const requireAuth = require("../middleware/authMiddleware");
 
 const {
     getGuideProgress,
-    addGuideProgress
+    addGuideProgress,
+    resetGuideProgress
 } = require("../controllers/guideProgressController");
 
 const router = express.Router();
@@ -20,6 +21,12 @@ router.post(
     "/guide-progress",
     requireAuth,
     addGuideProgress
+);
+
+router.delete(
+    "/guide-progress",
+    requireAuth,
+    resetGuideProgress
 );
 
 

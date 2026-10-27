@@ -107,7 +107,34 @@ const addGuideProgress = async (req, res) => {
 };
 
 
+// Clear the user's read set ("Read the Guide Again").
+const resetGuideProgress = async (req, res) => {
+    try {
+        await pool.query(
+            `
+            DELETE FROM guide_progress
+            WHERE user_id = $1
+            `,
+            [req.user.id]
+        );
+
+        res.json({
+            readSections: []
+        });
+
+    } catch (error) {
+
+        console.error("Reset guide progress error:", error);
+
+        res.status(500).json({
+            error: "Failed to reset guide progress"
+        });
+    }
+};
+
+
 module.exports = {
     getGuideProgress,
-    addGuideProgress
+    addGuideProgress,
+    resetGuideProgress
 };
