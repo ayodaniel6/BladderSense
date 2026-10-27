@@ -1,5 +1,9 @@
 const pool = require("../database/db");
 
+const {
+    clearSessionCookie
+} = require("../utils/sessionCookie");
+
 const formatUser = (user) => ({
     id: user.id,
     firstName: user.first_name,
@@ -139,6 +143,11 @@ const deleteAccount = async (req, res) => {
         );
 
         await client.query(
+            "DELETE FROM guide_progress WHERE user_id = $1",
+            [req.user.id]
+        );
+
+        await client.query(
             "DELETE FROM auth_tokens WHERE user_id = $1",
             [req.user.id]
         );
@@ -156,7 +165,7 @@ const deleteAccount = async (req, res) => {
         await client.query("COMMIT");
 
         // Expire the session cookie so the browser is signed out.
-        res.clearCookie("bladdersense_session");
+        clearSessionCookie(res);
 
         return res.json({
             message: "Your account has been deleted."

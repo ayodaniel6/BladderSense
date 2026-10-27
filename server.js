@@ -11,6 +11,7 @@ const profileRoutes = require("./routes/profileRoutes");
 const trackingRoutes = require("./routes/trackingRoutes");
 const reminderRoutes = require("./routes/reminderRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const guideProgressRoutes = require("./routes/guideProgressRoutes");
 
 const { startScheduler } = require("./scheduler");
 const { syncAdminEmails } = require("./utils/adminEmails");
@@ -57,6 +58,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api", profileRoutes);
 app.use("/api", trackingRoutes);
 app.use("/api", reminderRoutes);
+app.use("/api", guideProgressRoutes);
 app.use("/api/admin", adminRoutes);
 
 

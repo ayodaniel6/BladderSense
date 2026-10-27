@@ -16,6 +16,12 @@ const {
     isConfiguredAdmin
 } = require("../utils/adminEmails");
 
+const {
+    SESSION_COOKIE_NAME,
+    setSessionCookie,
+    clearSessionCookie
+} = require("../utils/sessionCookie");
+
 
 // ============================================================
 // REGISTER
@@ -194,7 +200,9 @@ const verifyEmail = async (req, res) => {
             .trim()
             .toLowerCase();
 
-        const normalizedToken = token.trim();
+        const normalizedToken = String(token)
+            .trim()
+            .toUpperCase();
 
         // Hash the token supplied by the user
         const tokenHash = hashToken(
@@ -216,7 +224,7 @@ const verifyEmail = async (req, res) => {
             await client.query("ROLLBACK");
 
             return res.status(404).json({
-                error: "User not found"
+                error: "No account found for this email. Please register."
             });
         }
 
@@ -343,7 +351,7 @@ const requestLogin = async (req, res) => {
 
         if (userResult.rows.length === 0) {
             return res.status(404).json({
-                error: "User not found"
+                error: "No account found for this email. Please register."
             });
         }
 
@@ -441,7 +449,9 @@ const verifyLogin = async (req, res) => {
             .trim()
             .toLowerCase();
 
-        const normalizedToken = token.trim();
+        const normalizedToken = String(token)
+            .trim()
+            .toUpperCase();
 
         // Hash submitted token before comparing
         const tokenHash = hashToken(
@@ -565,19 +575,7 @@ const verifyLogin = async (req, res) => {
         await client.query("COMMIT");
 
         // Create authentication cookie
-        res.cookie(
-            "bladdersense_session",
-            sessionId,
-            {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: process.env.NODE_ENV === "production"
-                    ? "none"
-                    : "lax",
-                expires: sessionExpiresAt,
-                maxAge: 7 * 24 * 60 * 60 * 1000
-            }
-        );
+        setSessionCookie(res, sessionId, sessionExpiresAt);
 
         res.json({
             message: "Login successful",
@@ -625,7 +623,7 @@ const verifyLogin = async (req, res) => {
 const logout = async (req, res) => {
     try {
         const sessionId =
-            req.cookies.bladdersense_session;
+            req.cookies[SESSION_COOKIE_NAME];
 
         if (sessionId) {
             await pool.query(
@@ -637,9 +635,7 @@ const logout = async (req, res) => {
             );
         }
 
-        res.clearCookie(
-            "bladdersense_session"
-        );
+        clearSessionCookie(res);
 
         res.json({
             message: "Logged out successfully"
@@ -698,7 +694,7 @@ const resendVerification = async (req, res) => {
             await client.query("ROLLBACK");
 
             return res.status(404).json({
-                error: "User not found"
+                error: "No account found for this email. Please register."
             });
         }
 

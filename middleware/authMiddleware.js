@@ -1,8 +1,13 @@
 const pool = require("../database/db");
 
+const {
+    SESSION_COOKIE_NAME,
+    clearSessionCookie
+} = require("../utils/sessionCookie");
+
 const requireAuth = async (req, res, next) => {
     try {
-        const sessionId = req.cookies.bladdersense_session;
+        const sessionId = req.cookies[SESSION_COOKIE_NAME];
 
         // No session cookie
         if (!sessionId) {
@@ -52,7 +57,7 @@ const requireAuth = async (req, res, next) => {
                 [sessionId]
             );
 
-            res.clearCookie("bladdersense_session");
+            clearSessionCookie(res);
 
             return res.status(401).json({
                 error: "Session expired"
